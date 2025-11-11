@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.content.res.Resources;
 import android.os.Binder;
 import android.os.Build;
@@ -209,26 +210,30 @@ public class MusicControlNotification {
         public void forceForeground() {
             // API lower than 26 do not need this work around.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Intent intent = new Intent(MusicControlNotification.NotificationService.this, MusicControlNotification.NotificationService.class);
-                // service has already been initialized.
-                // startForeground method should be called within 5 seconds.
-                ContextCompat.startForegroundService(MusicControlNotification.NotificationService.this, intent);
-
-                if (MusicControlModule.INSTANCE == null) {
-                    try {
-                        MusicControlModule.INSTANCE.init();
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                }
-
                 try {
-                    notification = MusicControlModule.INSTANCE.notification.prepareNotification(MusicControlModule.INSTANCE.nb, false);
+                    Intent intent = new Intent(MusicControlNotification.NotificationService.this,
+                            MusicControlNotification.NotificationService.class);
+                    // service has already been initialized.
+                    // startForeground method should be called within 5 seconds.
+                    ContextCompat.startForegroundService(MusicControlNotification.NotificationService.this, intent);
+
+                    if (MusicControlModule.INSTANCE == null) {
+                        MusicControlModule.INSTANCE.init();
+                    }
+
+                    notification = MusicControlModule.INSTANCE.notification
+                            .prepareNotification(MusicControlModule.INSTANCE.nb, false);
                     // call startForeground just after startForegroundService.
-                    startForeground(MusicControlModule.INSTANCE.getNotificationId(), notification);
-                }catch (Exception ex){
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        // add foreground service type for Android >= Q
+                        startForeground(MusicControlModule.INSTANCE.getNotificationId(), notification,
+                                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+                    } else {
+                        startForeground(MusicControlModule.INSTANCE.getNotificationId(), notification);
+                    }
+                } catch (Exception ex) {
                     ex.printStackTrace();
-                }                
+                }
             }
         }
 
